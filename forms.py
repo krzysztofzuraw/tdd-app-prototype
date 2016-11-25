@@ -1,5 +1,5 @@
-from flask.ext.wtf import Form
 from flask.ext.codemirror.fields import CodeMirrorField
+from flask.ext.wtf import Form
 from wtforms.fields import SubmitField
 
 

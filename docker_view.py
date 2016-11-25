@@ -1,6 +1,7 @@
-import os
 import io
-from flask import Flask, request, render_template
+import os
+
+from flask import Flask, render_template, request
 
 from forms import MyForm
 from settings import app, cli
