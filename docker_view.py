@@ -1,38 +1,30 @@
 import os
+import io
 from flask import Flask, request, render_template
-from docker import Client
 
-app = Flask(__name__)
-cli = Client(base_url='unix://var/run/docker.sock')
+from forms import MyForm
+from settings import app, cli
 
 
 @app.route("/", methods=['GET'])
-def hello():
-    return render_template('index.html')
+def index_page():
+    form = MyForm()
+    return render_template('index.html', form=form)
+
 
 @app.route("/send_code", methods=['POST'])
-def get_code():
-    data = request.form['code_to_send']
-    file_path = write_code_to_file_and_return_path(data)
-    output = create_container(file_path)
+def execute_code():
+    data = request.form['source_code']
+    code = io.StringIO(data)
+    create_container(code)
+    output = get_code_from_docker()
     return output
 
-def write_code_to_file_and_return_path(code):
-    with open(os.path.join(os.getcwd(), 'python_code_to_execute.py'), 'w') as f:
-        f.write(code)
-    return f.name
 
-
-def build_image():
-    response = [line for line in cli.build(
-        path=os.getcwd(), tag='my_docker'
-    )]
-    return response
-
-def create_container(command):
+def create_container(code):
     cli.create_container(
-         image='my_docker',
-         command=[os.path.basename(command)],
+         image='python:3',
+         command=['python','-c', code.getvalue()],
          volumes=['/opt'],
          host_config=cli.create_host_config(
              binds={ os.getcwd(): {
@@ -41,8 +33,11 @@ def create_container(command):
                  }
              }
          ),
-         name='hello_word_from_docker'
+         name='hello_word_from_docker',
+         working_dir='/opt'
     )
+
+def get_code_from_docker():
     cli.start('hello_word_from_docker')
     cli.wait('hello_word_from_docker')
     output = cli.logs('hello_word_from_docker')
